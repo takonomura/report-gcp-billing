@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/takonomura/report-gcp-billing/issues"
   },
-  "homepage": "https://github.com/takonomura/report-gcp-billing#readme"
+  "homepage": "https://github.com/takonomura/report-gcp-billing#readme",
+  "dependencies": {
+    "@google-cloud/storage": "^2.1.0"
+  }
 }
