@@ -22,7 +22,7 @@ function formatSlackMessage(report, date, services) {
   });
   return {
     attachments: [{
-      title: formatDate(date, '/'),
+      title: date.replace(/-/g, '/'),
       fields,
     }],
   };
@@ -43,15 +43,6 @@ function parseBillingReport(items) {
     amounts[service] = (amounts[service] || 0) + Number(item.cost.amount);
   });
   return { currency, amounts };
-}
-
-function getDateToReport() {
-  const TWO_DAYS = 24*60*60*1000*2;
-  return new Date(Date.now() - TWO_DAYS);
-}
-
-function formatDate(date, separator) {
-  return [date.getFullYear(), date.getMonth()+1, date.getDate()].join(separator);
 }
 
 function loadFromGCS(bucket, filename) {
@@ -94,11 +85,22 @@ function postToSlack(webhookURL, msg) {
   });
 }
 
-exports.reportGCPBilling = async (req, res) => {
-  const date = getDateToReport();
-  const json = await loadFromGCS(config.bucket, config.prefix + formatDate(date, '-') + '.json');
+function getDateFromName(name) {
+  const matched = name.match(/^.*?(\d{4}-\d{2}-\d{2}).json$/);
+  if (!matched) {
+    return null;
+  }
+  return matched[1];
+}
+
+exports.reportGCPBilling = async (file, context) => {
+  console.log(`bucket: ${file.bucket}; name: ${file.name}`);
+  const date = getDateFromName(file.name);
+  if (!date) {
+    throw new Error('Cannot extract date from filename');
+  }
+  const json = await loadFromGCS(file.bucket, file.name);
   const report = parseBillingReport(json);
   const msg = formatSlackMessage(report, date, config.services);
   const result = await postToSlack(config.slack_webhook_url, msg);
-  res.status(200).send(result);
 };
